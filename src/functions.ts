@@ -78,8 +78,8 @@ export async function guildLogsChecker(): Promise<void> {
                 const embed = new MessageEmbed();
                 embed.setColor("ORANGE");
                 embed.setTitle("Change Name Log");
-                embed.addField("Date:", lastTradeLog.date);
-                embed.addField("Info:", lastTradeLog.info);
+                embed.addField("Date:", lastChangeNameLog.date);
+                embed.addField("Info:", lastChangeNameLog.info);
                 embed.setTimestamp();
                 logChannel.send({ embeds: [embed] });  
             });

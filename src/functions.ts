@@ -1,9 +1,9 @@
-import { Client, Guild, Message, MessageEmbed, TextChannel } from "discord.js";
+import { Client, Guild, MessageEmbed, TextChannel } from "discord.js";
 import puppeteer from "puppeteer";
 import fs from "fs";
 
-import { prefix, urlLocations } from "./constants";
-import { playerStats, gangsList, guilds, unBanRequest } from "./interfaces";
+import { urlLocations } from "./constants";
+import { playerStats, gangsList, guilds, unBanRequestLog, simpleLog } from "./interfaces";
 
 let bot : Client;
 let browser : puppeteer.Browser;
@@ -15,12 +15,16 @@ export async function init(client: Client): Promise<void> {
 
 export async function guildLogsChecker(): Promise<void> {
     let lastUnBanRequest = await getLastUnBanRequest();
+    let lastBanLog = await getLastBanLog();
+    let lastTradeLog = await getLastTradeLog();
+
     setInterval(async() => {
         getLastUnBanRequest().then((value) => {
             if(lastUnBanRequest.linkToPost == value.linkToPost) return;
             lastUnBanRequest = value;
             bot.guilds.cache.filter(f => getGuilds().some(s => s.id == f.id && s.unBanRequestLog != null)).forEach((guild) => {
                 let logChannel = guild.channels.cache.get(getGuildVariable(guild, "unBanRequestLog").toString()) as TextChannel;
+                if(!logChannel) return;
                 const embed = new MessageEmbed();
                 embed.setColor("ORANGE");
                 embed.setTitle("New Un-Ban Request");
@@ -29,6 +33,38 @@ export async function guildLogsChecker(): Promise<void> {
                 embed.addField("Link to post:", lastUnBanRequest.linkToPost);
                 embed.setTimestamp();
                 logChannel.send({ embeds: [embed] });
+            });
+        });
+
+        getLastBanLog().then((value) => {
+            if(lastBanLog.info == value.info) return;
+            lastBanLog = value;
+            bot.guilds.cache.filter(f => getGuilds().some(s => s.id == f.id && s.bannedPlayerLog != null)).forEach((guild) => {
+                let logChannel = guild.channels.cache.get(getGuildVariable(guild, "bannedPlayerLog").toString()) as TextChannel;
+                if(!logChannel) return;
+                const embed = new MessageEmbed();
+                embed.setColor("ORANGE");
+                embed.setTitle("New Ban Log");
+                embed.addField("Date:", lastBanLog.date);
+                embed.addField("Info:", lastBanLog.info);
+                embed.setTimestamp();
+                logChannel.send({ embeds: [embed] });  
+            });
+        });
+
+        getLastTradeLog().then((value) => {
+            if(lastTradeLog.info == value.info) return;
+            lastTradeLog = value;
+            bot.guilds.cache.filter(f => getGuilds().some(s => s.id == f.id && s.tradeLog != null)).forEach((guild) => {
+                let logChannel = guild.channels.cache.get(getGuildVariable(guild, "tradeLog").toString()) as TextChannel;
+                if(!logChannel) return;
+                const embed = new MessageEmbed();
+                embed.setColor("ORANGE");
+                embed.setTitle("New Trade Log");
+                embed.addField("Date:", lastTradeLog.date);
+                embed.addField("Info:", lastTradeLog.info);
+                embed.setTimestamp();
+                logChannel.send({ embeds: [embed] });  
             });
         });
     }, 5000);
@@ -41,7 +77,6 @@ export function removeEvaluationFailedText(source: string) {
 export function getPlayerStats(name: string): Promise<playerStats> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        if(!page) return reject("Can't connect to rss-ro.com !");
         await page.goto(urlLocations.playerStats.replace("%", name));
         const data = page.evaluate((): Promise<playerStats> => {
             return new Promise((resolve, reject) => {
@@ -87,18 +122,13 @@ export function getPlayerStats(name: string): Promise<playerStats> {
 export function getGangsList(): Promise<gangsList[]> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        if(!page) return reject("Can't connect to rss-ro.com !");
         await page.goto(urlLocations.gangsList);
         const data = page.evaluate((): gangsList[] => {
             const table = document.getElementsByClassName("gtop")[0] as HTMLTableElement;
             const values: gangsList[] = [];
             for(let i = 1; i < table.rows.length; i++) { 
                 let value = table.rows[i].innerText.split("\t");
-                values.push({
-                    rank: value[0],
-                    name: value[1],
-                    points: value[2]
-                });
+                values.push({ rank: value[0], name: value[1], points: value[2] });
             }
             return values;
         });
@@ -110,20 +140,15 @@ export function getGangsList(): Promise<gangsList[]> {
     });
 }
 
-export function getLastUnBanRequest(): Promise<unBanRequest> {
+export function getLastUnBanRequest(): Promise<unBanRequestLog> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        if(!page) return reject("Can't connect to rss-ro.com !");
-        await page.goto(urlLocations.unBanRequests);
-        const data = page.evaluate((): unBanRequest => {
+        await page.goto(urlLocations.unBanRequestsLog);
+        const data = page.evaluate((): unBanRequestLog => {
             const table = document.getElementsByClassName("gtop")[0] as HTMLTableElement;
             const value = table.rows[1].innerText.split("\t");
             const link = table.rows[1].getElementsByTagName("a")[0].href;
-            return {
-                playerName: value[0],
-                adminName: value[1],
-                linkToPost: link
-            }
+            return { playerName: value[0], adminName: value[1], linkToPost: link }
         });
         data.then((response) => {
             resolve(response);
@@ -133,8 +158,38 @@ export function getLastUnBanRequest(): Promise<unBanRequest> {
     });
 }
 
-export function sendSyntax(message: Message, text: string) {
-    message.channel.send("```" + "Syntax: " + prefix + text + "```");
+export function getLastBanLog(): Promise<simpleLog> {
+    return new Promise(async(resolve, reject) => {
+        const page = await browser.newPage();
+        await page.goto(urlLocations.bannedPlayersLog);
+        const data = page.evaluate((): simpleLog => {
+            const table = document.getElementsByClassName("ltable")[0] as HTMLTableElement;
+            const value = table.rows[table.rows.length - 1].innerText.split("\t");
+            return { date: value[0], info: value[1] }
+        });
+        data.then((response) => {
+            resolve(response);
+        }).finally(() => {
+            page.close();
+        });
+    });
+}
+
+export function getLastTradeLog(): Promise<simpleLog> {
+    return new Promise(async(resolve, reject) => {
+        const page = await browser.newPage();
+        await page.goto(urlLocations.tradeLog);
+        const data = page.evaluate((): simpleLog => {
+            const table = document.getElementsByClassName("ltable")[1] as HTMLTableElement;
+            const value = table.rows[table.rows.length - 1].innerText.split("\t");
+            return { date: value[0], info: value[1] }
+        });
+        data.then((response) => {
+            resolve(response);
+        }).finally(() => {
+            page.close();
+        })
+    });
 }
 
 export function checkGuild(guild: Guild): void {
@@ -143,10 +198,12 @@ export function checkGuild(guild: Guild): void {
     if(!data.some(s => s.id == guild.id)) {
         data.push({
             id: guild.id, 
-            unBanRequestLog: null
+            unBanRequestLog: null,
+            bannedPlayerLog: null,
+            tradeLog: null
         }); 
         fs.writeFileSync(__dirname + "/guilds.json", JSON.stringify(data));
-    }
+    } 
 }
 
 export function removeGuild(guildId: string): void {

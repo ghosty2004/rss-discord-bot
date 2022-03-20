@@ -3,7 +3,7 @@ import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
 
 import commands from "./commands";
-import { token, prefix } from "./constants";
+import { token } from "./constants";
 import * as functions from "./functions";
 
 const bot = new Discord.Client({intents: [Discord.Intents.FLAGS.GUILDS, Discord.Intents.FLAGS.GUILD_MESSAGES]});

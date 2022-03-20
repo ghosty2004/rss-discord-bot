@@ -27,11 +27,18 @@ export interface gangsList {
 
 export interface guilds {
     id: string | null;
-    unBanRequestLog: string | null
+    unBanRequestLog: string | null;
+    bannedPlayerLog: string | null;
+    tradeLog: string | null;
 }
 
-export interface unBanRequest {
+export interface unBanRequestLog {
     playerName: string;
     adminName: string;
     linkToPost: string;
+}
+
+export interface simpleLog {
+    date: string;
+    info: string;
 }

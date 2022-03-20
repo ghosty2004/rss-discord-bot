@@ -1,8 +1,6 @@
 export const token = "OTU0NzY3NjA0NTMzMzI1ODM0.YjX6nw.g4y6t-kobs4Z7yTnbvfjWsQtHQM";
 
-export const prefix = "rss!";
-
-export const logTypes = ["unBanRequestLog"]
+export const logTypes = ["unBanRequestLog", "bannedPlayerLog", "tradeLog"]
 
 export const urlLocations = {
     default: "https://rss-ro.com/",
@@ -14,5 +12,5 @@ export const urlLocations = {
     playerStats: "https://rss-ro.com/playerstats.php?player=%",
     staffStats: "https://rss-ro.com/staffstats.php",
     gangsList: "https://rss-ro.com/gangs.php",
-    unBanRequests: "https://rss-ro.com/unbans.php"
+    unBanRequestsLog: "https://rss-ro.com/unbans.php"
 }

@@ -30,6 +30,7 @@ export interface guilds {
     unBanRequestLog: string | null;
     bannedPlayerLog: string | null;
     tradeLog: string | null;
+    changeNameLog: string | null;
 }
 
 export interface unBanRequestLog {

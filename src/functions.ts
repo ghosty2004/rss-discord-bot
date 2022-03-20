@@ -17,6 +17,7 @@ export async function guildLogsChecker(): Promise<void> {
     let lastUnBanRequest = await getLastUnBanRequest();
     let lastBanLog = await getLastBanLog();
     let lastTradeLog = await getLastTradeLog();
+    let lastChangeNameLog = await getLastChangeNameLog();
 
     setInterval(async() => {
         getLastUnBanRequest().then((value) => {
@@ -27,7 +28,7 @@ export async function guildLogsChecker(): Promise<void> {
                 if(!logChannel) return;
                 const embed = new MessageEmbed();
                 embed.setColor("ORANGE");
-                embed.setTitle("New Un-Ban Request");
+                embed.setTitle("Un-Ban Request");
                 embed.addField("Player:", lastUnBanRequest.playerName);
                 embed.addField("Admin:", lastUnBanRequest.adminName);
                 embed.addField("Link to post:", lastUnBanRequest.linkToPost);
@@ -44,7 +45,7 @@ export async function guildLogsChecker(): Promise<void> {
                 if(!logChannel) return;
                 const embed = new MessageEmbed();
                 embed.setColor("ORANGE");
-                embed.setTitle("New Ban Log");
+                embed.setTitle("Ban Log");
                 embed.addField("Date:", lastBanLog.date);
                 embed.addField("Info:", lastBanLog.info);
                 embed.setTimestamp();
@@ -60,7 +61,23 @@ export async function guildLogsChecker(): Promise<void> {
                 if(!logChannel) return;
                 const embed = new MessageEmbed();
                 embed.setColor("ORANGE");
-                embed.setTitle("New Trade Log");
+                embed.setTitle("Trade Log");
+                embed.addField("Date:", lastTradeLog.date);
+                embed.addField("Info:", lastTradeLog.info);
+                embed.setTimestamp();
+                logChannel.send({ embeds: [embed] });  
+            });
+        });
+
+        getLastChangeNameLog().then((data) => {
+            if(lastChangeNameLog.info == data.info) return;
+            lastChangeNameLog = data;
+            bot.guilds.cache.filter(f => getGuilds().some(s => s.id == f.id && s.changeNameLog != null)).forEach((guild) => {
+                let logChannel = guild.channels.cache.get(getGuildVariable(guild, "changeNameLog").toString()) as TextChannel;
+                if(!logChannel) return;
+                const embed = new MessageEmbed();
+                embed.setColor("ORANGE");
+                embed.setTitle("Change Name Log");
                 embed.addField("Date:", lastTradeLog.date);
                 embed.addField("Info:", lastTradeLog.info);
                 embed.setTimestamp();
@@ -188,7 +205,24 @@ export function getLastTradeLog(): Promise<simpleLog> {
             resolve(response);
         }).finally(() => {
             page.close();
-        })
+        });
+    });
+}
+
+export function getLastChangeNameLog(): Promise<simpleLog> {
+    return new Promise(async(resolve, reject) => {
+        const page = await browser.newPage();
+        await page.goto(urlLocations.changeNameLog);
+        const data = page.evaluate((): simpleLog => {
+            const table = document.getElementsByClassName("ltable")[0] as HTMLTableElement;
+            const value = table.rows[table.rows.length - 1].innerText.split("\t");
+            return { date: value[0], info: value[1] }
+        });
+        data.then((response) => {
+            resolve(response);
+        }).finally(() => {
+            page.close();
+        });
     });
 }
 
@@ -217,7 +251,8 @@ export function checkGuild(guild: Guild): void {
             id: guild.id, 
             unBanRequestLog: null,
             bannedPlayerLog: null,
-            tradeLog: null
+            tradeLog: null,
+            changeNameLog: null
         }); 
         fs.writeFileSync(__dirname + "/guilds.json", JSON.stringify(data));
     } 

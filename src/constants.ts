@@ -2,6 +2,8 @@ export const token = "OTU0NzY3NjA0NTMzMzI1ODM0.YjX6nw.g4y6t-kobs4Z7yTnbvfjWsQtHQ
 
 export const logTypes = ["unBanRequestLog", "bannedPlayerLog", "tradeLog", "changeNameLog"];
 
+export const topTypes = ["players", "admins"];
+
 export const urlLocations = {
     default: "https://rss-ro.com/",
     eventsLog: "https://rss-ro.com/logs.php?type=1",

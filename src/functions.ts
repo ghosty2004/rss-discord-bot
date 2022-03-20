@@ -226,15 +226,25 @@ export function getLastChangeNameLog(): Promise<simpleLog> {
     });
 }
 
-export function getTopListImage(): Promise<string | Buffer> {
+export function getTopListImage(type: string): Promise<string | Buffer> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        await page.goto(urlLocations.default);
+        let pageLocation = "", pageSelector = "";
+        if(type == "players") {
+            pageLocation = urlLocations.default;
+            pageSelector = "body > div.content > div.widgets > table.top";
+        }
+        else if(type == "admins") {
+            pageLocation = urlLocations.staffStats;
+            pageSelector = "body > div.content > div.posts > table:nth-child(6)";
+        }
+        await page.goto(pageLocation);
         page.evaluate(() => {
             document.body.style.background = "transparent";
+            document.getElementsByClassName("nav_bar")[0].remove();
         }).then(async() => {
-            await page.waitForSelector("body > div.content > div.widgets > table.top");
-            const element = await page.$("body > div.content > div.widgets > table.top");
+            await page.waitForSelector(pageSelector);
+            const element = await page.$(pageSelector);
             const image = await element.screenshot({omitBackground: true, type: "png"});
             resolve(image);
         }).finally(() => {

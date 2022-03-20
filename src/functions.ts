@@ -192,6 +192,23 @@ export function getLastTradeLog(): Promise<simpleLog> {
     });
 }
 
+export function getTopListImage(): Promise<string | Buffer> {
+    return new Promise(async(resolve, reject) => {
+        const page = await browser.newPage();
+        await page.goto(urlLocations.default);
+        page.evaluate(() => {
+            document.body.style.background = "transparent";
+        }).then(async() => {
+            await page.waitForSelector("body > div.content > div.widgets > table.top");
+            const element = await page.$("body > div.content > div.widgets > table.top");
+            const image = await element.screenshot({omitBackground: true, type: "png"});
+            resolve(image);
+        }).finally(() => {
+            page.close();
+        });
+    });
+}
+
 export function checkGuild(guild: Guild): void {
     const stringData = fs.readFileSync(__dirname + "/guilds.json").toString();
     let data: [guilds] = JSON.parse(stringData);

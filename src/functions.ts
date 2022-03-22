@@ -1,8 +1,11 @@
 import { Client, Guild, MessageEmbed, TextChannel } from "discord.js";
+import { REST } from "@discordjs/rest";
+import { Routes } from "discord-api-types/v9";
 import puppeteer from "puppeteer";
 import fs from "fs";
 
-import { urlLocations } from "./constants";
+import commands from "./commands";
+import { token, urlLocations } from "./constants";
 import { playerStats, gangsList, guilds, unBanRequestLog, simpleLog } from "./interfaces";
 
 let bot : Client;
@@ -87,14 +90,14 @@ export async function guildLogsChecker(): Promise<void> {
     }, 5000);
 }
 
-export function removeEvaluationFailedText(source: string) {
+export function removeEvaluationFailedText(source: string): string {
     return source.replace("Evaluation failed: ", "");
 }
 
 export function getPlayerStats(name: string): Promise<playerStats> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        await page.goto(urlLocations.playerStats.replace("%", name));
+        await page.goto(urlLocations.playerStats.replace("%", name), { timeout: 0 });
         const data = page.evaluate((): Promise<playerStats> => {
             return new Promise((resolve, reject) => {
                 const error = document.getElementsByClassName("error")[0] as HTMLDivElement;
@@ -102,6 +105,7 @@ export function getPlayerStats(name: string): Promise<playerStats> {
                 else {
                     const table = document.getElementsByClassName("gtop")[1] as HTMLTableElement;
                     const values = [];
+                    if(!table.rows) return;
                     for(let i = 0; i < table.rows.length; i++) { values.push(table.rows[i].innerText.split("\t")[1]); }
                     return resolve({
                         name: values[0],
@@ -139,10 +143,11 @@ export function getPlayerStats(name: string): Promise<playerStats> {
 export function getGangsList(): Promise<gangsList[]> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        await page.goto(urlLocations.gangsList);
+        await page.goto(urlLocations.gangsList, { timeout: 0 });
         const data = page.evaluate((): gangsList[] => {
             const table = document.getElementsByClassName("gtop")[0] as HTMLTableElement;
             const values: gangsList[] = [];
+            if(!table.rows) return;
             for(let i = 1; i < table.rows.length; i++) { 
                 let value = table.rows[i].innerText.split("\t");
                 values.push({ rank: value[0], name: value[1], points: value[2] });
@@ -160,9 +165,10 @@ export function getGangsList(): Promise<gangsList[]> {
 export function getLastUnBanRequest(): Promise<unBanRequestLog> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        await page.goto(urlLocations.unBanRequestsLog);
+        await page.goto(urlLocations.unBanRequestsLog, { timeout: 0 });
         const data = page.evaluate((): unBanRequestLog => {
             const table = document.getElementsByClassName("gtop")[0] as HTMLTableElement;
+            if(!table.rows) return;
             const value = table.rows[1].innerText.split("\t");
             const link = table.rows[1].getElementsByTagName("a")[0].href;
             return { playerName: value[0], adminName: value[1], linkToPost: link }
@@ -178,9 +184,10 @@ export function getLastUnBanRequest(): Promise<unBanRequestLog> {
 export function getLastBanLog(): Promise<simpleLog> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        await page.goto(urlLocations.bannedPlayersLog);
+        await page.goto(urlLocations.bannedPlayersLog, { timeout: 0 });
         const data = page.evaluate((): simpleLog => {
             const table = document.getElementsByClassName("ltable")[0] as HTMLTableElement;
+            if(!table.rows) return;
             const value = table.rows[table.rows.length - 1].innerText.split("\t");
             return { date: value[0], info: value[1] }
         });
@@ -195,9 +202,10 @@ export function getLastBanLog(): Promise<simpleLog> {
 export function getLastTradeLog(): Promise<simpleLog> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        await page.goto(urlLocations.tradeLog);
+        await page.goto(urlLocations.tradeLog, { timeout: 0 });
         const data = page.evaluate((): simpleLog => {
             const table = document.getElementsByClassName("ltable")[1] as HTMLTableElement;
+            if(!table.rows) return;
             const value = table.rows[table.rows.length - 1].innerText.split("\t");
             return { date: value[0], info: value[1] }
         });
@@ -212,9 +220,10 @@ export function getLastTradeLog(): Promise<simpleLog> {
 export function getLastChangeNameLog(): Promise<simpleLog> {
     return new Promise(async(resolve, reject) => {
         const page = await browser.newPage();
-        await page.goto(urlLocations.changeNameLog);
+        await page.goto(urlLocations.changeNameLog, { timeout: 0 });
         const data = page.evaluate((): simpleLog => {
             const table = document.getElementsByClassName("ltable")[0] as HTMLTableElement;
+            if(!table.rows) return;
             const value = table.rows[table.rows.length - 1].innerText.split("\t");
             return { date: value[0], info: value[1] }
         });
@@ -238,7 +247,7 @@ export function getTopListImage(type: string): Promise<string | Buffer> {
             pageLocation = urlLocations.staffStats;
             pageSelector = "body > div.content > div.posts > table:nth-child(6)";
         }
-        await page.goto(pageLocation);
+        await page.goto(pageLocation), { timeout: 0 };
         page.evaluate(() => {
             document.body.style.background = "transparent";
             document.getElementsByClassName("nav_bar")[0].remove();
@@ -266,6 +275,20 @@ export function checkGuild(guild: Guild): void {
         }); 
         fs.writeFileSync(__dirname + "/guilds.json", JSON.stringify(data));
     } 
+
+    const tempCommands = [];
+    commands.forEach((command) => { tempCommands.push(command.data().toJSON()); }); 
+
+    const rest = new REST({version: '9'}).setToken(token);   
+    rest.get(Routes.applicationGuildCommands(bot.user.id, guild.id)).then(async(data) => {
+        await rest.put(
+            Routes.applicationGuildCommands(bot.user.id, guild.id), { body: tempCommands },
+        ).then(() => {
+            console.log(`Successfully updated slash commands from guild: ${guild.name}.`);
+        }).catch((err) => {
+            console.log(err.message);
+        })
+    }); 
 }
 
 export function removeGuild(guildId: string): void {

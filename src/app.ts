@@ -1,6 +1,4 @@
 import Discord from "discord.js";
-import { REST } from "@discordjs/rest";
-import { Routes } from "discord-api-types/v9";
 
 import commands from "./commands";
 import { token } from "./constants";
@@ -15,24 +13,8 @@ bot.on("ready", async () => {
         functions.guildLogsChecker();
     });
 
-    const tempCommands = [];
-    commands.forEach((command) => { tempCommands.push(command.data().toJSON()); }); 
-
-    const rest = new REST({version: '9'}).setToken(token);   
     bot.guilds.cache.forEach((guild) => {
         functions.checkGuild(guild);
-        rest.get(Routes.applicationGuildCommands(bot.user.id, guild.id)).then(async(data) => {
-            await rest.put(
-                Routes.applicationGuildCommands(bot.user.id, guild.id), {
-                    body: tempCommands
-                },
-            ).then(() => {
-                console.log(`Successfully updated slash commands from guild: ${guild.name}.`);
-            }).catch((e) => {
-                console.log(`Could not update slash commands from developer guild: ${guild.name}.`);
-                console.log(e.message);
-            });   
-        }); 
     });
 });
 

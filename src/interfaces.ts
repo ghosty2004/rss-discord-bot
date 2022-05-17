@@ -1,3 +1,11 @@
+export interface serverStats {
+    onlinePlayers: number,
+    maxPlayers: number,
+    mostPlayersToday: number,
+    IP: string,
+    DNS: string
+}
+
 export interface playerStats {
     name: string | null;
     online: string | null;

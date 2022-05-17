@@ -6,7 +6,7 @@ import fs from "fs";
 
 import commands from "./commands";
 import { token, urlLocations } from "./constants";
-import { playerStats, gangsList, guilds, unBanRequestLog, simpleLog } from "./interfaces";
+import { playerStats, gangsList, guilds, unBanRequestLog, simpleLog, serverStats } from "./interfaces";
 
 let bot : Client;
 let browser : puppeteer.Browser;
@@ -92,6 +92,31 @@ export async function guildLogsChecker(): Promise<void> {
 
 export function removeEvaluationFailedText(source: string): string {
     return source.replace("Evaluation failed: ", "");
+}
+
+export function getServerStats(): Promise<serverStats> {
+    return new Promise(async(resolve) => {
+        const page = await browser.newPage();
+        await page.goto(urlLocations.default, { timeout: 0 });
+        const data = page.evaluate((): Promise<serverStats> => {
+            return new Promise((resolve) => {
+                const infoBox = document.querySelector("#main_header > div:nth-child(2)") as HTMLElement;
+                const data = infoBox.innerText.split("\n");
+                resolve({
+                    onlinePlayers: parseInt(data[2].replace("Jucatori: ", "").split("/")[0]),
+                    maxPlayers: parseInt(data[2].replace("Jucatori: ", "").split("/")[1]),
+                    mostPlayersToday: parseInt(data[3].replace("Cei mai multi jucatori azi: ", "")),
+                    DNS: data[4].replace("IP: ", ""),
+                    IP: data[5].replace("(", "").replace(")", "")
+                });
+            });
+        });
+        data.then((data) => {
+            resolve(data);
+        }).finally(() => {
+            page.close();
+        });
+    });
 }
 
 export function getPlayerStats(name: string): Promise<playerStats> {

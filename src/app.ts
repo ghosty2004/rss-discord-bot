@@ -16,6 +16,11 @@ bot.on("ready", async () => {
     bot.guilds.cache.forEach((guild) => {
         functions.checkGuild(guild);
     });
+
+    setInterval(async() => {
+        const serverStats = await functions.getServerStats();
+        bot.user.setActivity({type: "PLAYING", name: `${serverStats.onlinePlayers}/${serverStats.maxPlayers} players`});
+    }, 5000);
 });
 
 bot.on("guildCreate", (guild) => {

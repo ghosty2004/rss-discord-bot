@@ -2,11 +2,12 @@
 
 <h3>Set up:</h3>
 
-First of all you need to have **NodeJS** installed, then follow the console commands bellow
+First of all you need to have **NodeJS** installed, then follow the instructions below
 
 1. `npm install`
 2. `npm install typescript ts-node`
-3. `ts-node .`
+3. `edit your bot token from /src/constants.ts`
+4. `ts-node .`
 
 <h3>Available commands:</h3>
 
